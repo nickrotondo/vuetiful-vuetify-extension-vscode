@@ -35,12 +35,7 @@
     "hover"
   ],
   "activationEvents": [
-    "onLanguage:vue",
-    "onLanguage:html",
-    "onLanguage:javascript",
-    "onLanguage:typescript",
-    "onLanguage:javascriptreact",
-    "onLanguage:typescriptreact"
+    "onStartupFinished"
   ],
   "main": "./out/extension.js",
   "contributes": {

@@ -17,11 +17,25 @@ export class VuetifyCache {
 
   /**
    * Get cached utilities for a workspace
+   * Validates cache if cssFilePath is provided
    */
-  async get(workspacePath: string, version: string): Promise<UtilityClass[] | null> {
+  async get(
+    workspacePath: string,
+    version: string,
+    cssFilePath?: string
+  ): Promise<UtilityClass[] | null> {
     // Try memory cache first
     const memEntry = this.memoryCache.get(workspacePath);
     if (memEntry && memEntry.version === version) {
+      // Validate if CSS path provided
+      if (cssFilePath) {
+        const isValid = await this.isValid(workspacePath, version, cssFilePath);
+        if (!isValid) {
+          this.logger.debug(`Memory cache invalid for ${workspacePath}, hash mismatch`);
+          await this.invalidate(workspacePath);
+          return null;
+        }
+      }
       this.logger.debug(`Memory cache hit for ${workspacePath}`);
       return memEntry.utilities;
     }
@@ -31,6 +45,15 @@ export class VuetifyCache {
     const diskEntry = this.context.workspaceState.get<CacheEntry>(cacheKey);
 
     if (diskEntry && diskEntry.version === version) {
+      // Validate if CSS path provided
+      if (cssFilePath) {
+        const isValid = await this.isValid(workspacePath, version, cssFilePath);
+        if (!isValid) {
+          this.logger.debug(`Disk cache invalid for ${workspacePath}, hash mismatch`);
+          await this.invalidate(workspacePath);
+          return null;
+        }
+      }
       this.logger.debug(`Disk cache hit for ${workspacePath}`);
 
       // Restore to memory cache

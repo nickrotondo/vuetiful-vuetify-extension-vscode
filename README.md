@@ -21,6 +21,7 @@ IntelliSense for Vuetify 3 utility classes - powerful autocomplete and hover doc
 ## Usage
 
 1. Install Vuetify 3 in your project:
+
    ```bash
    npm install vuetify
    ```
@@ -28,6 +29,7 @@ IntelliSense for Vuetify 3 utility classes - powerful autocomplete and hover doc
 2. Install this extension from the VSCode marketplace
 
 3. Start typing Vuetify utility classes in your templates:
+
    ```vue
    <template>
      <div class="ma-">
@@ -55,6 +57,7 @@ IntelliSense for Vuetify 3 utility classes - powerful autocomplete and hover doc
 ## How It Works
 
 This extension works by:
+
 1. Finding Vuetify in your workspace's `node_modules`
 2. Parsing the compiled CSS file to extract all utility classes
 3. Caching the results for fast subsequent startups
@@ -85,6 +88,7 @@ This extension works by:
 ### Performance issues?
 
 The extension caches extracted utilities. If you experience slow performance:
+
 1. Check if you have very large CSS files
 2. Try restarting VSCode to clear and rebuild the cache
 

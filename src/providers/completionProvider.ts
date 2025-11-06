@@ -12,7 +12,7 @@ export class VuetifyCompletionProvider implements vscode.CompletionItemProvider 
     document: vscode.TextDocument,
     position: vscode.Position,
     token: vscode.CancellationToken,
-    context: vscode.CompletionContext
+    _context: vscode.CompletionContext
   ): Promise<vscode.CompletionItem[] | vscode.CompletionList | undefined> {
     // Check if request was cancelled before starting
     if (token.isCancellationRequested) {

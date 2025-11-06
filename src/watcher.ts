@@ -98,7 +98,7 @@ export class VuetifyWatcher implements vscode.Disposable {
 
       watcher.onDidDelete(() => {
         this.logger.info('Vuetify uninstalled, clearing cache...');
-        this.extractor.clear();
+        void this.extractor.clear();
       });
 
       this.watchers.push(watcher);
@@ -120,7 +120,7 @@ export class VuetifyWatcher implements vscode.Disposable {
           },
           async () => {
             await this.extractor.extractAll(true);
-            vscode.window.showInformationMessage('Vuetify utilities refreshed!');
+            void vscode.window.showInformationMessage('Vuetify utilities refreshed!');
           }
         );
       }
@@ -138,7 +138,7 @@ export class VuetifyWatcher implements vscode.Disposable {
     }
 
     this.debounceTimer = setTimeout(() => {
-      this.extractor.extractAll(true);
+      void this.extractor.extractAll(true);
     }, FILE_WATCHER_DEBOUNCE_MS);
   }
 
@@ -152,6 +152,5 @@ export class VuetifyWatcher implements vscode.Disposable {
 
     this.watchers.forEach(w => w.dispose());
     this.watchers = [];
-    this.logger.dispose();
   }
 }

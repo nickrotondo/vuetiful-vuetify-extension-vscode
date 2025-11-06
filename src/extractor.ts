@@ -17,23 +17,40 @@ export class VuetifyExtractor implements vscode.Disposable {
   private utilities = new Map<string, UtilityClass[]>();
   private extractionPromise: Promise<void> | null = null;
   private isExtracted = false;
+  private abortController: AbortController | null = null;
 
   constructor(context: vscode.ExtensionContext) {
     this.logger = new Logger('Extractor');
     this.finder = new VuetifyFinder(this.logger);
     this.parser = new CSSParser(this.logger);
     this.cache = new VuetifyCache(context, this.logger);
-    context.subscriptions.push(this.logger);
   }
 
   /**
    * Extract utilities for all workspaces
+   * Cancels any ongoing extraction before starting
    */
   async extractAll(forceRefresh = false): Promise<void> {
+    // Cancel any ongoing extraction
+    if (this.abortController) {
+      this.abortController.abort();
+      this.logger.debug('Cancelled ongoing extraction');
+    }
+
+    // Create new abort controller for this extraction
+    this.abortController = new AbortController();
+    const signal = this.abortController.signal;
+
     try {
       this.logger.info('Starting utility extraction...');
 
       const installations = await this.finder.findAll();
+
+      // Check if cancelled after async operation
+      if (signal.aborted) {
+        this.logger.debug('Extraction cancelled after finding installations');
+        return;
+      }
 
       if (installations.size === 0) {
         this.handleNoVuetifyFound();
@@ -44,6 +61,12 @@ export class VuetifyExtractor implements vscode.Disposable {
       this.logger.info(`Found ${installations.size} Vuetify installation(s)`);
 
       for (const [workspacePath, installation] of installations) {
+        // Check if cancelled before each workspace
+        if (signal.aborted) {
+          this.logger.debug('Extraction cancelled during workspace processing');
+          return;
+        }
+
         try {
           await this.extractForWorkspace(installation, forceRefresh);
         } catch (error) {
@@ -54,7 +77,13 @@ export class VuetifyExtractor implements vscode.Disposable {
       this.isExtracted = true;
       this.logger.info('Extraction completed');
     } catch (error) {
+      if (signal.aborted) {
+        this.logger.debug('Extraction cancelled');
+        return;
+      }
       this.handleCriticalError(error);
+    } finally {
+      this.abortController = null;
     }
   }
 
@@ -73,7 +102,7 @@ export class VuetifyExtractor implements vscode.Disposable {
 
     // Check cache unless force refresh
     if (!forceRefresh) {
-      const cached = await this.cache.get(workspacePath, version);
+      const cached = await this.cache.get(workspacePath, version, cssPath);
       if (cached) {
         this.logger.debug(`Using cached utilities (${cached.length} classes)`);
         this.utilities.set(workspacePath, cached);
@@ -160,9 +189,14 @@ export class VuetifyExtractor implements vscode.Disposable {
    * Dispose of resources
    */
   dispose(): void {
+    // Cancel any ongoing extraction
+    if (this.abortController) {
+      this.abortController.abort();
+      this.abortController = null;
+    }
+
     this.utilities.clear();
     this.installations.clear();
-    this.logger.dispose();
   }
 
   /**
@@ -173,15 +207,15 @@ export class VuetifyExtractor implements vscode.Disposable {
 
     const config = vscode.workspace.getConfiguration('vuetifulVuetify');
     if (config.get('showWarnings', true)) {
-      vscode.window.showInformationMessage(
+      void vscode.window.showInformationMessage(
         'Vuetify not detected. Install Vuetify to enable utility class autocomplete.',
         'Learn More',
         "Don't Show Again"
       ).then(selection => {
         if (selection === 'Learn More') {
-          vscode.env.openExternal(vscode.Uri.parse('https://vuetifyjs.com/'));
+          void vscode.env.openExternal(vscode.Uri.parse('https://vuetifyjs.com/'));
         } else if (selection === "Don't Show Again") {
-          config.update('showWarnings', false, vscode.ConfigurationTarget.Workspace);
+          void config.update('showWarnings', false, vscode.ConfigurationTarget.Workspace);
         }
       });
     }
@@ -198,18 +232,24 @@ export class VuetifyExtractor implements vscode.Disposable {
     const isSyntaxError = error instanceof SyntaxError;
 
     if (isFileNotFound) {
-      vscode.window.showErrorMessage(
+      void vscode.window.showErrorMessage(
         'Vuetify CSS file not found. The package may be corrupted.',
         'Reinstall Vuetify'
-      ).then(selection => {
+      ).then(async selection => {
         if (selection === 'Reinstall Vuetify') {
-          const terminal = vscode.window.createTerminal('Vuetify Install');
-          terminal.show();
-          terminal.sendText('npm install --force vuetify');
+          // Use Task API instead of terminal to prevent command injection
+          const task = new vscode.Task(
+            { type: 'shell' },
+            vscode.TaskScope.Workspace,
+            'Reinstall Vuetify',
+            'npm',
+            new vscode.ShellExecution('npm', ['install', '--force', 'vuetify'])
+          );
+          await vscode.tasks.executeTask(task);
         }
       });
     } else if (isSyntaxError) {
-      vscode.window.showErrorMessage(
+      void vscode.window.showErrorMessage(
         'Failed to parse Vuetify CSS. The file may be corrupted.',
         'View Logs'
       ).then(selection => {
@@ -218,7 +258,7 @@ export class VuetifyExtractor implements vscode.Disposable {
         }
       });
     } else {
-      vscode.window.showErrorMessage(
+      void vscode.window.showErrorMessage(
         `Vuetify extraction failed: ${errorMessage}`,
         'View Logs'
       ).then(selection => {
@@ -235,9 +275,7 @@ export class VuetifyExtractor implements vscode.Disposable {
   private handleCriticalError(error: unknown): void {
     this.logger.error('Critical error during extraction', error);
 
-    const errorMessage = error instanceof Error ? error.message : String(error);
-
-    vscode.window.showErrorMessage(
+    void vscode.window.showErrorMessage(
       'Vuetiful Vuetify extension encountered a critical error.',
       'View Logs',
       'Report Issue'
@@ -245,7 +283,7 @@ export class VuetifyExtractor implements vscode.Disposable {
       if (selection === 'View Logs') {
         this.logger.show();
       } else if (selection === 'Report Issue') {
-        vscode.env.openExternal(
+        void vscode.env.openExternal(
           vscode.Uri.parse('https://github.com/your-username/vuetiful-vuetify-extension/issues/new')
         );
       }

@@ -4,6 +4,7 @@ import { VuetifyWatcher } from './watcher';
 import { VuetifyCompletionProvider } from './providers/completionProvider';
 import { VuetifyHoverProvider } from './providers/hoverProvider';
 import { Logger } from './logger';
+import { OutputChannelManager } from './outputChannelManager';
 
 // Store references for cleanup
 let extractor: VuetifyExtractor | undefined;
@@ -14,9 +15,8 @@ let logger: Logger | undefined;
  * Extension activation
  */
 export async function activate(context: vscode.ExtensionContext) {
-  // Create logger
+  // Create logger (uses shared OutputChannel)
   logger = new Logger('Extension');
-  context.subscriptions.push(logger);
 
   logger.info('Extension activating...');
 
@@ -60,14 +60,37 @@ export async function activate(context: vscode.ExtensionContext) {
     })
   );
 
-  // Extract utilities in background
-  setImmediate(() => {
-    extractor.extractAll().catch(err => {
-      logger?.error('Extraction failed during activation', err);
-    });
+  // Start extraction in background
+  // Don't block activation, but ensure extraction completes
+  void extractor.extractAll().then(() => {
+    logger?.info('Initial extraction completed');
+  }).catch(err => {
+    logger?.error('Initial extraction failed', err);
   });
 
   logger.info('Extension activated');
+
+  // Return public API for other extensions
+  return {
+    /**
+     * Get utilities for a specific document
+     */
+    getUtilities: (document: vscode.TextDocument) => extractor?.getUtilities(document) || [],
+
+    /**
+     * Get all utilities across all workspaces
+     */
+    getAllUtilities: () => extractor?.getAllUtilities() || [],
+
+    /**
+     * Manually refresh utilities (force re-extraction)
+     */
+    refresh: async () => {
+      if (extractor) {
+        await extractor.extractAll(true);
+      }
+    },
+  };
 }
 
 /**
@@ -89,9 +112,9 @@ export function deactivate() {
 
   logger?.info('Extension deactivated');
 
-  // Dispose logger last
-  if (logger) {
-    logger.dispose();
-    logger = undefined;
-  }
+  // Clear logger reference
+  logger = undefined;
+
+  // Dispose shared OutputChannel last
+  OutputChannelManager.dispose();
 }

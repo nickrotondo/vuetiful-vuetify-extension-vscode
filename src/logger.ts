@@ -1,16 +1,18 @@
 import * as vscode from 'vscode';
-import { CONFIG_SECTION, CONFIG_ENABLE_LOGGING, OUTPUT_CHANNEL_NAME } from './constants';
+import { CONFIG_SECTION, CONFIG_ENABLE_LOGGING } from './constants';
+import { OutputChannelManager } from './outputChannelManager';
 
 /**
  * Centralized logging utility that respects user configuration
+ * Uses shared OutputChannel to prevent resource leaks
  */
 export class Logger implements vscode.Disposable {
   private outputChannel: vscode.OutputChannel;
   private context: string;
 
-  constructor(context: string, outputChannel?: vscode.OutputChannel) {
+  constructor(context: string) {
     this.context = context;
-    this.outputChannel = outputChannel || vscode.window.createOutputChannel(OUTPUT_CHANNEL_NAME);
+    this.outputChannel = OutputChannelManager.getInstance();
   }
 
   /**
@@ -78,8 +80,9 @@ export class Logger implements vscode.Disposable {
 
   /**
    * Dispose of resources
+   * Note: Does not dispose the shared OutputChannel (managed by OutputChannelManager)
    */
   dispose(): void {
-    this.outputChannel.dispose();
+    // No-op - shared OutputChannel is disposed by OutputChannelManager during extension deactivation
   }
 }
