@@ -25,6 +25,9 @@ export class VuetifyExtractor implements vscode.Disposable {
     this.finder = new VuetifyFinder(this.logger);
     this.parser = new CSSParser(this.logger);
     this.cache = new VuetifyCache(context, this.logger);
+
+    // Migrate old workspace state entries to file storage
+    void this.cache.migrateFromWorkspaceState();
   }
 
   /**
