@@ -73,6 +73,7 @@
     "lint": "eslint src --ext ts"
   },
   "devDependencies": {
+    "@types/css-tree": "^2.3.11",
     "@types/node": "^18.19.0",
     "@types/vscode": "^1.74.0",
     "@typescript-eslint/eslint-plugin": "^6.19.0",

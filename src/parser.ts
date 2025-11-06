@@ -32,7 +32,7 @@ export class CSSParser {
       const maxSizeMB = (MAX_CSS_FILE_SIZE_BYTES / 1024 / 1024).toFixed(2);
       throw new Error(
         `CSS file too large (${sizeMB}MB). Maximum size is ${maxSizeMB}MB. ` +
-        `This file may not be a standard Vuetify CSS file.`
+          `This file may not be a standard Vuetify CSS file.`
       );
     }
 
@@ -46,7 +46,7 @@ export class CSSParser {
     const parseStart = Date.now();
     const ast = csstree.parse(cssContent, {
       parseAtrulePrelude: false,
-      parseValue: false
+      parseValue: false,
     });
     this.logger.debug(`Parsed CSS in ${Date.now() - parseStart}ms`);
 
@@ -66,7 +66,7 @@ export class CSSParser {
     const utilities: UtilityClass[] = [];
     const seen = new Set<string>();
 
-    csstree.walk(ast, (node) => {
+    csstree.walk(ast, node => {
       if (node.type === 'Rule') {
         const rule = node as csstree.Rule;
         this.extractUtilitiesFromRule(rule, utilities, seen);
@@ -92,7 +92,7 @@ export class CSSParser {
 
     // Extract properties
     const properties: Record<string, string> = {};
-    csstree.walk(rule.block, (node) => {
+    csstree.walk(rule.block, node => {
       if (node.type === 'Declaration') {
         const decl = node as csstree.Declaration;
         properties[decl.property] = csstree.generate(decl.value);
@@ -117,7 +117,7 @@ export class CSSParser {
         selector,
         properties,
         category,
-        description
+        description,
       });
     }
   }
@@ -222,7 +222,9 @@ export class CSSParser {
 
       case UtilityCategory.Flexbox: {
         if (className.startsWith('flex-')) {
-          return `Flex property: ${Object.entries(properties).map(([k, v]) => `${k}: ${v}`).join(', ')}`;
+          return `Flex property: ${Object.entries(properties)
+            .map(([k, v]) => `${k}: ${v}`)
+            .join(', ')}`;
         }
         if (className.startsWith('justify-')) {
           return `Justify content: ${properties['justify-content'] || ''}`;
@@ -235,7 +237,9 @@ export class CSSParser {
 
       case UtilityCategory.Typography: {
         if (className.startsWith('text-')) {
-          return `Text utility: ${Object.entries(properties).map(([k, v]) => `${k}: ${v}`).join(', ')}`;
+          return `Text utility: ${Object.entries(properties)
+            .map(([k, v]) => `${k}: ${v}`)
+            .join(', ')}`;
         }
         return `Typography utility`;
       }
@@ -258,15 +262,15 @@ export class CSSParser {
    * Get spacing direction description
    */
   private getSpacingDirection(className: string): string {
-    if (className.match(/m[ap]a-/)) return 'on all sides';
-    if (className.match(/m[ap]t-/)) return 'on top';
-    if (className.match(/m[ap]r-/)) return 'on right';
-    if (className.match(/m[ap]b-/)) return 'on bottom';
-    if (className.match(/m[ap]l-/)) return 'on left';
-    if (className.match(/m[ap]s-/)) return 'on start (inline-start)';
-    if (className.match(/m[ap]e-/)) return 'on end (inline-end)';
-    if (className.match(/m[ap]x-/)) return 'horizontally';
-    if (className.match(/m[ap]y-/)) return 'vertically';
+    if (className.match(/^[mp]a-/)) return 'on all sides';
+    if (className.match(/^[mp]t-/)) return 'on top';
+    if (className.match(/^[mp]r-/)) return 'on right';
+    if (className.match(/^[mp]b-/)) return 'on bottom';
+    if (className.match(/^[mp]l-/)) return 'on left';
+    if (className.match(/^[mp]s-/)) return 'on start (inline-start)';
+    if (className.match(/^[mp]e-/)) return 'on end (inline-end)';
+    if (className.match(/^[mp]x-/)) return 'horizontally';
+    if (className.match(/^[mp]y-/)) return 'vertically';
     return '';
   }
 }

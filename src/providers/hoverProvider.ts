@@ -60,7 +60,7 @@ export class VuetifyHoverProvider implements vscode.HoverProvider {
 
     // Description
     if (utility.description) {
-      markdown.appendMarkdown(`${utility.description}\n\n`);
+      markdown.appendMarkdown(`*${utility.description.trim()}*\n\n`);
     }
 
     // Separator

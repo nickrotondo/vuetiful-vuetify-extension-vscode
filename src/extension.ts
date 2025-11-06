@@ -60,6 +60,15 @@ export async function activate(context: vscode.ExtensionContext) {
     })
   );
 
+  // Register commands
+  context.subscriptions.push(
+    vscode.commands.registerCommand('vuetifulVuetify.refreshUtilities', async () => {
+      logger?.info('Manual refresh triggered');
+      await extractor.extractAll(true);
+      vscode.window.showInformationMessage('Vuetify utility classes refreshed');
+    })
+  );
+
   // Start extraction in background
   // Don't block activation, but ensure extraction completes
   void extractor.extractAll().then(() => {
