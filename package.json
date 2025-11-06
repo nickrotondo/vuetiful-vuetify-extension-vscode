@@ -1,0 +1,88 @@
+{
+  "name": "vuetiful-vuetify",
+  "displayName": "Vuetiful Vuetify",
+  "description": "IntelliSense for Vuetify 3 utility classes - autocomplete and hover documentation",
+  "version": "0.1.0",
+  "publisher": "vuetiful-vuetify",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/your-username/vuetiful-vuetify-extension.git"
+  },
+  "bugs": {
+    "url": "https://github.com/your-username/vuetiful-vuetify-extension/issues"
+  },
+  "engines": {
+    "vscode": "^1.74.0"
+  },
+  "categories": [
+    "Programming Languages",
+    "Snippets",
+    "Other"
+  ],
+  "keywords": [
+    "vuetify",
+    "vuetify3",
+    "vue",
+    "vuejs",
+    "vue3",
+    "autocomplete",
+    "intellisense",
+    "utility classes",
+    "css",
+    "tailwind-like",
+    "code-completion",
+    "hover"
+  ],
+  "activationEvents": [
+    "onLanguage:vue",
+    "onLanguage:html",
+    "onLanguage:javascript",
+    "onLanguage:typescript",
+    "onLanguage:javascriptreact",
+    "onLanguage:typescriptreact"
+  ],
+  "main": "./out/extension.js",
+  "contributes": {
+    "commands": [
+      {
+        "command": "vuetifulVuetify.refreshUtilities",
+        "title": "Vuetify: Refresh Utility Classes"
+      }
+    ],
+    "configuration": {
+      "title": "Vuetiful Vuetify",
+      "properties": {
+        "vuetifulVuetify.showWarnings": {
+          "type": "boolean",
+          "default": true,
+          "description": "Show warning messages when Vuetify is not detected"
+        },
+        "vuetifulVuetify.enableLogging": {
+          "type": "boolean",
+          "default": false,
+          "description": "Enable detailed logging to output channel"
+        }
+      }
+    }
+  },
+  "scripts": {
+    "vscode:prepublish": "npm run build",
+    "build": "node esbuild.config.js --production",
+    "watch": "node esbuild.config.js --watch",
+    "package": "vsce package",
+    "lint": "eslint src --ext ts"
+  },
+  "devDependencies": {
+    "@types/node": "^18.19.0",
+    "@types/vscode": "^1.74.0",
+    "@typescript-eslint/eslint-plugin": "^6.19.0",
+    "@typescript-eslint/parser": "^6.19.0",
+    "esbuild": "^0.19.11",
+    "eslint": "^8.56.0",
+    "typescript": "^5.3.3"
+  },
+  "dependencies": {
+    "css-tree": "^2.3.1"
+  }
+}
