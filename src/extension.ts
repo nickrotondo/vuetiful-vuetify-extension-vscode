@@ -15,17 +15,17 @@ let logger: Logger | undefined;
  * Extension activation
  */
 export async function activate(context: vscode.ExtensionContext) {
-  // Create logger (uses shared OutputChannel)
-  logger = new Logger('Extension');
+  try {
+    // Create logger (uses shared OutputChannel)
+    logger = new Logger('Extension');
+    logger.info('Extension activating...');
 
-  logger.info('Extension activating...');
+    // Create extractor
+    extractor = new VuetifyExtractor(context);
+    context.subscriptions.push(extractor);
 
-  // Create extractor
-  extractor = new VuetifyExtractor(context);
-  context.subscriptions.push(extractor);
-
-  // Register completion provider
-  const completionProvider = new VuetifyCompletionProvider(extractor);
+    // Register completion provider
+    const completionProvider = new VuetifyCompletionProvider(extractor);
   context.subscriptions.push(
     vscode.languages.registerCompletionItemProvider(
       ['vue', 'html', 'javascript', 'typescript', 'javascriptreact', 'typescriptreact'],
@@ -68,29 +68,33 @@ export async function activate(context: vscode.ExtensionContext) {
     logger?.error('Initial extraction failed', err);
   });
 
-  logger.info('Extension activated');
+    logger.info('Extension activated');
 
-  // Return public API for other extensions
-  return {
-    /**
-     * Get utilities for a specific document
-     */
-    getUtilities: (document: vscode.TextDocument) => extractor?.getUtilities(document) || [],
+    // Return public API for other extensions
+    return {
+      /**
+       * Get utilities for a specific document
+       */
+      getUtilities: (document: vscode.TextDocument) => extractor?.getUtilities(document) || [],
 
-    /**
-     * Get all utilities across all workspaces
-     */
-    getAllUtilities: () => extractor?.getAllUtilities() || [],
+      /**
+       * Get all utilities across all workspaces
+       */
+      getAllUtilities: () => extractor?.getAllUtilities() || [],
 
-    /**
-     * Manually refresh utilities (force re-extraction)
-     */
-    refresh: async () => {
-      if (extractor) {
-        await extractor.extractAll(true);
-      }
-    },
-  };
+      /**
+       * Manually refresh utilities (force re-extraction)
+       */
+      refresh: async () => {
+        if (extractor) {
+          await extractor.extractAll(true);
+        }
+      },
+    };
+  } catch (error) {
+    logger?.error('Extension activation failed', error);
+    throw error; // Re-throw to let VSCode know activation failed
+  }
 }
 
 /**

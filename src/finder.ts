@@ -1,6 +1,5 @@
 import * as vscode from 'vscode';
 import * as path from 'path';
-import * as fs from 'fs';
 import { VuetifyInstallation } from './types';
 import { MONOREPO_SUBDIRECTORIES, VUETIFY_CSS_PATHS } from './constants';
 import { Logger } from './logger';
@@ -43,7 +42,7 @@ export class VuetifyFinder {
    */
   async findInWorkspace(
     workspaceFolder: vscode.WorkspaceFolder
-  ): Promise<VuetifyInstallation | null> {
+  ): Promise<VuetifyInstallation | undefined> {
     const workspacePath = workspaceFolder.uri.fsPath;
 
     // Search for Vuetify in various locations
@@ -53,9 +52,9 @@ export class VuetifyFinder {
   /**
    * Find Vuetify in monorepo structures
    */
-  private async findInMonorepo(workspaceRoot: string): Promise<VuetifyInstallation | null> {
+  private async findInMonorepo(workspaceRoot: string): Promise<VuetifyInstallation | undefined> {
     if (!workspaceRoot || typeof workspaceRoot !== 'string') {
-      return null;
+      return undefined;
     }
 
     const searchPaths = [
@@ -78,7 +77,7 @@ export class VuetifyFinder {
       }
     }
 
-    return null;
+    return undefined;
   }
 
   /**
@@ -101,8 +100,11 @@ export class VuetifyFinder {
         // Also check if it's a packages/apps directory with nested projects
         if (subdir === 'packages' || subdir === 'apps') {
           try {
-            const entries = await fs.promises.readdir(subdirPath);
-            for (const entry of entries) {
+            if (!subdirPath || typeof subdirPath !== 'string') continue;
+            const uri = vscode.Uri.file(subdirPath);
+            const entries = await vscode.workspace.fs.readDirectory(uri);
+            for (const [entry] of entries) {
+              if (!entry) continue;
               const nestedVuetifyPath = path.join(subdirPath, entry, 'node_modules', 'vuetify');
               if (await this.pathExists(nestedVuetifyPath)) {
                 paths.push(nestedVuetifyPath);
@@ -131,10 +133,12 @@ export class VuetifyFinder {
     }
 
     try {
-      const entries = await fs.promises.readdir(pnpmStorePath);
+      if (!pnpmStorePath || typeof pnpmStorePath !== 'string') return [];
+      const uri = vscode.Uri.file(pnpmStorePath);
+      const entries = await vscode.workspace.fs.readDirectory(uri);
       return entries
-        .filter(entry => entry && entry.startsWith('vuetify@'))
-        .map(entry => path.join(pnpmStorePath, entry, 'node_modules', 'vuetify'))
+        .filter(([entry]) => entry && entry.startsWith('vuetify@'))
+        .map(([entry]) => path.join(pnpmStorePath, entry, 'node_modules', 'vuetify'))
         .filter(p => p && typeof p === 'string');
     } catch (error) {
       this.logger.debug(`Error reading pnpm store at ${pnpmStorePath}`, error);
@@ -155,9 +159,10 @@ export class VuetifyFinder {
     }
 
     try {
-      const packageJson = JSON.parse(
-        await fs.promises.readFile(packageJsonPath, 'utf-8')
-      );
+      if (!packageJsonPath || typeof packageJsonPath !== 'string') return [];
+      const uri = vscode.Uri.file(packageJsonPath);
+      const contentBytes = await vscode.workspace.fs.readFile(uri);
+      const packageJson = JSON.parse(new TextDecoder('utf-8').decode(contentBytes));
 
       const workspaces = packageJson.workspaces || [];
       const workspacePaths: string[] = [];
@@ -183,22 +188,26 @@ export class VuetifyFinder {
   private async createInstallation(
     packagePath: string,
     workspacePath: string
-  ): Promise<VuetifyInstallation | null> {
+  ): Promise<VuetifyInstallation | undefined> {
     if (!packagePath || !workspacePath) {
-      return null;
+      return undefined;
     }
 
     try {
       // Read package.json for version
       const packageJsonPath = path.join(packagePath, 'package.json');
-      const packageJson = JSON.parse(
-        await fs.promises.readFile(packageJsonPath, 'utf-8')
-      );
+      if (!packageJsonPath || typeof packageJsonPath !== 'string') {
+        this.logger.error(`packageJsonPath is invalid in createInstallation: ${packageJsonPath}`);
+        return undefined;
+      }
+      const uri = vscode.Uri.file(packageJsonPath);
+      const contentBytes = await vscode.workspace.fs.readFile(uri);
+      const packageJson = JSON.parse(new TextDecoder('utf-8').decode(contentBytes));
 
       // Find CSS file
       const cssPath = await this.findCssFile(packagePath);
       if (!cssPath) {
-        return null;
+        return undefined;
       }
 
       return {
@@ -209,16 +218,16 @@ export class VuetifyFinder {
       };
     } catch (error) {
       this.logger.debug(`Error creating installation for ${packagePath}`, error);
-      return null;
+      return undefined;
     }
   }
 
   /**
    * Find the Vuetify CSS file
    */
-  private async findCssFile(packagePath: string): Promise<string | null> {
+  private async findCssFile(packagePath: string): Promise<string | undefined> {
     if (!packagePath) {
-      return null;
+      return undefined;
     }
 
     const possiblePaths = VUETIFY_CSS_PATHS.map(relativePath =>
@@ -231,18 +240,20 @@ export class VuetifyFinder {
       }
     }
 
-    return null;
+    return undefined;
   }
 
   /**
    * Check if path exists
+   * Uses VSCode workspace.fs API for compatibility with remote workspaces
    */
-  private async pathExists(p: string | undefined | null): Promise<boolean> {
+  private async pathExists(p: string | undefined): Promise<boolean> {
     if (!p || typeof p !== 'string') {
       return false;
     }
     try {
-      await fs.promises.access(p);
+      const uri = vscode.Uri.file(p);
+      await vscode.workspace.fs.stat(uri);
       return true;
     } catch {
       return false;

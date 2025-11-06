@@ -136,7 +136,7 @@ export class VuetifyCompletionProvider implements vscode.CompletionItemProvider 
    */
   private createDocumentation(utility: UtilityClass): vscode.MarkdownString {
     const markdown = new vscode.MarkdownString();
-    markdown.isTrusted = true;
+    // Don't set isTrusted - content is from CSS file which could contain malicious data
 
     // Title
     markdown.appendMarkdown(`**${utility.name}**\n\n`);

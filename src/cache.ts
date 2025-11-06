@@ -1,5 +1,4 @@
 import * as vscode from 'vscode';
-import * as fs from 'fs';
 import * as crypto from 'crypto';
 import { CacheEntry, UtilityClass } from './types';
 import { Logger } from './logger';
@@ -23,7 +22,7 @@ export class VuetifyCache {
     workspacePath: string,
     version: string,
     cssFilePath?: string
-  ): Promise<UtilityClass[] | null> {
+  ): Promise<UtilityClass[] | undefined> {
     // Try memory cache first
     const memEntry = this.memoryCache.get(workspacePath);
     if (memEntry && memEntry.version === version) {
@@ -33,7 +32,7 @@ export class VuetifyCache {
         if (!isValid) {
           this.logger.debug(`Memory cache invalid for ${workspacePath}, hash mismatch`);
           await this.invalidate(workspacePath);
-          return null;
+          return undefined;
         }
       }
       this.logger.debug(`Memory cache hit for ${workspacePath}`);
@@ -51,7 +50,7 @@ export class VuetifyCache {
         if (!isValid) {
           this.logger.debug(`Disk cache invalid for ${workspacePath}, hash mismatch`);
           await this.invalidate(workspacePath);
-          return null;
+          return undefined;
         }
       }
       this.logger.debug(`Disk cache hit for ${workspacePath}`);
@@ -62,7 +61,7 @@ export class VuetifyCache {
     }
 
     this.logger.debug(`Cache miss for ${workspacePath}`);
-    return null;
+    return undefined;
   }
 
   /**
@@ -156,29 +155,31 @@ export class VuetifyCache {
 
   /**
    * Generate cache key
+   * Uses SHA-256 hash of workspace path for cross-platform compatibility
    */
   private getCacheKey(workspacePath: string, version: string): string {
-    const sanitized = this.sanitizePath(workspacePath);
-    return `vuetify-cache-${sanitized}-${version}`;
+    const pathHash = crypto.createHash('sha256').update(workspacePath).digest('hex').substring(0, 16);
+    return `vuetify-cache-${pathHash}-${version}`;
   }
 
   /**
-   * Sanitize path for use in cache key
+   * Calculate SHA-256 hash of file
+   * Uses SHA-256 instead of MD5 for better security
+   * Uses VSCode workspace.fs API for compatibility with remote workspaces
    */
-  private sanitizePath(path: string): string {
-    return path.replace(/[^a-zA-Z0-9]/g, '-');
-  }
+  private async calculateFileHash(filePath: string): Promise<string | undefined> {
+    if (!filePath || typeof filePath !== 'string') {
+      this.logger.error(`calculateFileHash called with invalid filePath: ${filePath}`);
+      return undefined;
+    }
 
-  /**
-   * Calculate MD5 hash of file
-   */
-  private async calculateFileHash(filePath: string): Promise<string | null> {
     try {
-      const content = await fs.promises.readFile(filePath);
-      return crypto.createHash('md5').update(content).digest('hex');
+      const uri = vscode.Uri.file(filePath);
+      const content = await vscode.workspace.fs.readFile(uri);
+      return crypto.createHash('sha256').update(content).digest('hex');
     } catch (error) {
       this.logger.error(`Error calculating hash for ${filePath}`, error);
-      return null;
+      return undefined;
     }
   }
 }

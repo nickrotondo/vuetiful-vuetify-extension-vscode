@@ -51,12 +51,16 @@
         "vuetifulVuetify.showWarnings": {
           "type": "boolean",
           "default": true,
-          "description": "Show warning messages when Vuetify is not detected"
+          "markdownDescription": "Show warning messages when Vuetify is not detected in your workspace. Disable this if you don't use Vuetify in this project.",
+          "scope": "window",
+          "order": 1
         },
         "vuetifulVuetify.enableLogging": {
           "type": "boolean",
           "default": false,
-          "description": "Enable detailed logging to output channel"
+          "markdownDescription": "Enable detailed logging to the output channel for debugging. View logs with `View > Output` and select `Vuetiful Vuetify`.",
+          "scope": "window",
+          "order": 2
         }
       }
     }

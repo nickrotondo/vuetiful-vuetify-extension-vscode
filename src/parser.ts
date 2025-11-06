@@ -1,4 +1,4 @@
-import * as fs from 'fs';
+import * as vscode from 'vscode';
 import * as csstree from 'css-tree';
 import { UtilityClass, UtilityCategory } from './types';
 import { UTILITY_PREFIXES, MAX_CSS_FILE_SIZE_BYTES } from './constants';
@@ -14,13 +14,19 @@ export class CSSParser {
 
   /**
    * Parse CSS file and extract utility classes
+   * Uses VSCode workspace.fs API for compatibility with remote workspaces
    */
   async parseCSS(cssFilePath: string): Promise<UtilityClass[]> {
+    if (!cssFilePath || typeof cssFilePath !== 'string') {
+      throw new Error(`parseCSS called with invalid cssFilePath: ${cssFilePath}`);
+    }
+
     const startTime = Date.now();
     this.logger.debug(`Reading CSS file: ${cssFilePath}`);
 
     // Check file size before reading
-    const stats = await fs.promises.stat(cssFilePath);
+    const uri = vscode.Uri.file(cssFilePath);
+    const stats = await vscode.workspace.fs.stat(uri);
     if (stats.size > MAX_CSS_FILE_SIZE_BYTES) {
       const sizeMB = (stats.size / 1024 / 1024).toFixed(2);
       const maxSizeMB = (MAX_CSS_FILE_SIZE_BYTES / 1024 / 1024).toFixed(2);
@@ -31,7 +37,8 @@ export class CSSParser {
     }
 
     // Read file
-    const cssContent = await fs.promises.readFile(cssFilePath, 'utf-8');
+    const contentBytes = await vscode.workspace.fs.readFile(uri);
+    const cssContent = new TextDecoder('utf-8').decode(contentBytes);
     const sizeInMB = (cssContent.length / 1024 / 1024).toFixed(2);
     this.logger.debug(`Read ${sizeInMB}MB in ${Date.now() - startTime}ms`);
 

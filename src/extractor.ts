@@ -18,6 +18,7 @@ export class VuetifyExtractor implements vscode.Disposable {
   private extractionPromise: Promise<void> | null = null;
   private isExtracted = false;
   private abortController: AbortController | null = null;
+  private allUtilitiesCache: UtilityClass[] | null = null;
 
   constructor(context: vscode.ExtensionContext) {
     this.logger = new Logger('Extractor');
@@ -122,6 +123,9 @@ export class VuetifyExtractor implements vscode.Disposable {
     this.utilities.set(workspacePath, utilities);
     this.installations.set(workspacePath, installation);
 
+    // Invalidate cache since utilities changed
+    this.allUtilitiesCache = null;
+
     this.logger.info(`Successfully extracted ${utilities.length} utility classes`);
   }
 
@@ -139,12 +143,20 @@ export class VuetifyExtractor implements vscode.Disposable {
 
   /**
    * Get all utilities across all workspaces
+   * Results are memoized for performance
    */
   getAllUtilities(): UtilityClass[] {
+    // Return cached result if available
+    if (this.allUtilitiesCache !== null) {
+      return this.allUtilitiesCache;
+    }
+
+    // Compute and cache result
     const all: UtilityClass[] = [];
     for (const utilities of this.utilities.values()) {
       all.push(...utilities);
     }
+    this.allUtilitiesCache = all;
     return all;
   }
 
@@ -181,6 +193,7 @@ export class VuetifyExtractor implements vscode.Disposable {
     this.installations.clear();
     this.isExtracted = false;
     this.extractionPromise = null;
+    this.allUtilitiesCache = null;
     await this.cache.clear();
     this.logger.info('Cleared all data');
   }
